@@ -16,9 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build image
-        run: docker build -t guilene2022/portfolio .
+        run: docker build -t ${{ secrets.REGISTRY_USERNAME }}/portfolio .
       
       - name: push image to Docker Hub
         run: |
-            docker login -u guilene2022 -p ${{ secrets.REGISTRY_PASSWORD }}
-            docker push guilene2022/portfolio
+            docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+            docker push ${{ secrets.REGISTRY_USERNAME }}/portfolio
