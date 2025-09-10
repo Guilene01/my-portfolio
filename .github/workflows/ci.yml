@@ -9,20 +9,15 @@ on:
 jobs:
   
   build:
-   
     runs-on: ubuntu-latest 
     steps:
       - uses: actions/checkout@v4
       - name: Build image
         run: |
-              docker build -t ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}} .
-              docker build -t ${{ secrets.REGISTRY_USERNAME }}/portfolio .
-      - name: push image to Docker Hub
-        run: |
-            docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
-            docker push ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}}
-            docker push ${{ secrets.REGISTRY_USERNAME }}/portfolio
-    trivy-scan:
+          docker build -t ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}} .
+          docker build -t ${{ secrets.REGISTRY_USERNAME }}/portfolio .
+
+  trivy-scan:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -49,7 +44,7 @@ jobs:
           docker push ${{ secrets.REGISTRY_USERNAME }}/portfolio
 
   deploy: 
-    needs: build           
+    needs: push
     runs-on: ubuntu-latest
     steps:
       - name: SSH to Server and deploy
@@ -60,5 +55,5 @@ jobs:
           key: ${{ secrets.KEY }}
           #port: ${{ secrets.PORT }}
           script: |
-            docker rm -f resume || echo ""
+            docker rm -f resume || true
             docker run -d --name resume -p 8080:5001 ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}}
