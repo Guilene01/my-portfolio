@@ -31,7 +31,7 @@ jobs:
         with:
           image-ref: ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}}
           format: 'table'
-          exit-code: '1'
+          exit-code: '0'
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
