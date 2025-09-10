@@ -1,6 +1,5 @@
 Flask>=2.3.3
 reportlab>=4.0.9
-
 click>=8.1.7
 itsdangerous>=2.1.2
 werkzeug>=3.0.3
