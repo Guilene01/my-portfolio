@@ -45,7 +45,14 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Docker login
+      # Configure AWS credentials via OIDC for this job
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Docker login to ECR
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
 
