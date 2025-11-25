@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 permissions:
-  id-token: write          # Required for OIDC
+  id-token: write
   contents: read
   packages: write
 
@@ -19,19 +19,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Configure AWS credentials via OIDC
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      # Log in to ECR
       - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Build and push Docker image
       - name: Build and push Docker image
         id: set-image
         run: |
@@ -41,35 +38,33 @@ jobs:
           docker push $IMAGE_URI
           echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
 
-trivy-scan:
-  needs: build
-  runs-on: ubuntu-latest
-  steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v3
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: us-east-1
-
-    - name: Pull image and scan with Trivy
-      run: |
-        IMAGE_URI="${{ needs.build.outputs.image-uri }}"
-        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
-        docker pull $IMAGE_URI
-        trivy image --format table --exit-code 0 --vuln-type os,library --severity CRITICAL,HIGH $IMAGE_URI
-
-  deploy:
-    needs: trivy-scan
+  trivy-scan:
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      # Configure AWS credentials via OIDC
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      # Deploy to ECS
+      - name: Pull image and scan with Trivy
+        run: |
+          IMAGE_URI="${{ needs.build.outputs.image-uri }}"
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+          docker pull $IMAGE_URI
+          trivy image --format table --exit-code 0 --vuln-type os,library --severity CRITICAL,HIGH $IMAGE_URI
+
+  deploy:
+    needs: trivy-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
       - name: Deploy to ECS
         run: |
           CLUSTER_NAME="simple-cluster"
@@ -79,10 +74,8 @@ trivy-scan:
 
           echo "Deploying $IMAGE_URI to ECS..."
 
-          # Get current task definition
           TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_FAMILY)
 
-          # Update container image in task definition
           NEW_TASK_DEF=$(echo $TASK_DEF | jq --arg IMAGE "$IMAGE_URI" \
             '.taskDefinition.containerDefinitions[0].image=$IMAGE | 
              {family: .taskDefinition.family, 
@@ -93,11 +86,7 @@ trivy-scan:
               cpu: .taskDefinition.cpu, 
               memory: .taskDefinition.memory}')
 
-          # Save updated task definition
           echo "$NEW_TASK_DEF" > new-task.json
 
-          # Register new task definition
           aws ecs register-task-definition --cli-input-json file://new-task.json
-
-          # Force new deployment
           aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --force-new-deployment
