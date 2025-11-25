@@ -1,50 +1,50 @@
-name: CI
+# name: CI
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+# on:
+#   push:
+#     branches: [ "main" ]
+#   pull_request:
+#     branches: [ "main" ]
  
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build image
-        run: |
-          docker build -t ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}} .
-          docker build -t ${{ secrets.REGISTRY_USERNAME }}/portfolio .
-      - name: Docker login
-        run: docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
-      - name: Push image
-        run: |
-          docker push ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}}
-          docker push ${{ secrets.REGISTRY_USERNAME }}/portfolio
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - name: Build image
+#         run: |
+#           docker build -t ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}} .
+#           docker build -t ${{ secrets.REGISTRY_USERNAME }}/portfolio .
+#       - name: Docker login
+#         run: docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+#       - name: Push image
+#         run: |
+#           docker push ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}}
+#           docker push ${{ secrets.REGISTRY_USERNAME }}/portfolio
 
-  trivy-scan:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}}
-          format: 'table'
-          exit-code: '0'
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+#   trivy-scan:
+#     needs: build
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Run Trivy vulnerability scanner
+#         uses: aquasecurity/trivy-action@0.20.0
+#         with:
+#           image-ref: ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}}
+#           format: 'table'
+#           exit-code: '0'
+#           vuln-type: 'os,library'
+#           severity: 'CRITICAL,HIGH'
 
-  deploy:
-    needs: trivy-scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: SSH to Server and deploy
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.KEY }}
-          script: |
-            docker rm -f resume || true
-            docker run -d --name resume -p 8080:5001 ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}}
+#   deploy:
+#     needs: trivy-scan
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: SSH to Server and deploy
+#         uses: appleboy/ssh-action@v1
+#         with:
+#           host: ${{ secrets.HOST }}
+#           username: ${{ secrets.USERNAME }}
+#           key: ${{ secrets.KEY }}
+#           script: |
+#             docker rm -f resume || true
+#             docker run -d --name resume -p 8080:5001 ${{ secrets.REGISTRY_USERNAME }}/portfolio:${{github.run_number}}
