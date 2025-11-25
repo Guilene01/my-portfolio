@@ -33,7 +33,6 @@ jobs:
         id: set-image
         run: |
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPO_NAME }}:${{ github.run_number }}"
-          echo "Building $IMAGE_URI"
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
           echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
@@ -51,6 +50,7 @@ jobs:
       - name: Pull image and scan with Trivy
         run: |
           IMAGE_URI="${{ needs.build.outputs.image-uri }}"
+          echo "Scanning $IMAGE_URI"
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
           docker pull $IMAGE_URI
           trivy image --format table --exit-code 0 --vuln-type os,library --severity CRITICAL,HIGH $IMAGE_URI
@@ -71,8 +71,6 @@ jobs:
           SERVICE_NAME="simple-service"
           TASK_FAMILY="simple-task"
           IMAGE_URI="${{ needs.build.outputs.image-uri }}"
-
-          echo "Deploying $IMAGE_URI to ECS..."
 
           TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_FAMILY)
 
