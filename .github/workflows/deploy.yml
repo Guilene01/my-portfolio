@@ -36,13 +36,13 @@ jobs:
           echo "::set-output name=image::$IMAGE_URI"
 
   trivy-scan:
-     needs: build
-     runs-on: ubuntu-latest
-     steps:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ secrets.ECR_REPO_NAME }}/portfolio:${{github.run_number}}
+          image-ref: ${{ steps.build.outputs.image }}
           format: 'table'
           exit-code: '0'
           vuln-type: 'os,library'
