@@ -41,29 +41,22 @@ jobs:
           docker push $IMAGE_URI
           echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
 
-  trivy-scan:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      # Configure AWS credentials via OIDC for this job
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+trivy-scan:
+  needs: build
+  runs-on: ubuntu-latest
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: us-east-1
 
-      - name: Docker login to ECR
-        run: |
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
-
-      - name: Run Trivy
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: ${{ needs.build.outputs.image-uri }}
-          format: table
-          exit-code: 0
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
+    - name: Pull image and scan with Trivy
+      run: |
+        IMAGE_URI="${{ needs.build.outputs.image-uri }}"
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+        docker pull $IMAGE_URI
+        trivy image --format table --exit-code 0 --vuln-type os,library --severity CRITICAL,HIGH $IMAGE_URI
 
   deploy:
     needs: trivy-scan
