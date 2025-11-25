@@ -41,23 +41,22 @@ jobs:
           docker push $IMAGE_URI
           echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
 
-  trivy-scan:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      # Login to Docker to pull private image
-      - name: Docker login
-        run: docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+trivy-scan:
+  needs: build
+  runs-on: ubuntu-latest
+  steps:
+    - name: Docker login
+      run: |
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
 
-      # Scan image with Trivy
-      - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: ${{ needs.build.outputs.image-uri }}
-          format: 'table'
-          exit-code: '0'
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+    - name: Run Trivy
+      uses: aquasecurity/trivy-action@0.20.0
+      with:
+        image-ref: ${{ needs.build.outputs.image-uri }}
+        format: table
+        exit-code: 0
+        vuln-type: os,library
+        severity: CRITICAL,HIGH
 
   deploy:
     needs: trivy-scan
