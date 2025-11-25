@@ -7,20 +7,22 @@ on:
     branches: [ "main" ]
 
 permissions:
-  id-token: write      # Required for OIDC auth
+  id-token: write
   contents: read
-  packages: write      # Optional if you use GitHub packages
+  packages: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      image-uri: ${{ steps.set-image.outputs.image }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # IAM Role for GitHub OIDC
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
       - name: Log in to Amazon ECR
@@ -28,21 +30,25 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker image to ECR
+        id: set-image
         run: |
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPO_NAME }}:${{ github.run_number }}"
-          echo "Image URI: $IMAGE_URI"
+          echo "Building and pushing $IMAGE_URI"
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
-          echo "::set-output name=image::$IMAGE_URI"
+          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
 
   trivy-scan:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Docker login
+        run: docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ steps.build.outputs.image }}
+          image-ref: ${{ needs.build.outputs.image-uri }}
           format: 'table'
           exit-code: '0'
           vuln-type: 'os,library'
@@ -63,11 +69,14 @@ jobs:
           CLUSTER_NAME="simple-cluster"
           SERVICE_NAME="simple-service"
           TASK_FAMILY="simple-task"
-          IMAGE_URI="${{ steps.build.outputs.image }}"
+          IMAGE_URI="${{ needs.build.outputs.image-uri }}"
+
+          echo "Deploying $IMAGE_URI to ECS..."
 
           # Create new task definition revision with the updated image
           TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $TASK_FAMILY)
-          NEW_TASK_DEF=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE_URI" '.taskDefinition.containerDefinitions[0].image=$IMAGE | {family: .taskDefinition.family, containerDefinitions: [.taskDefinition.containerDefinitions[0]], executionRoleArn: .taskDefinition.executionRoleArn, networkMode: .taskDefinition.networkMode, requiresCompatibilities: .taskDefinition.requiresCompatibilities, cpu: .taskDefinition.cpu, memory: .taskDefinition.memory}')
+          NEW_TASK_DEF=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE_URI" \
+            '.taskDefinition.containerDefinitions[0].image=$IMAGE | {family: .taskDefinition.family, containerDefinitions: [.taskDefinition.containerDefinitions[0]], executionRoleArn: .taskDefinition.executionRoleArn, networkMode: .taskDefinition.networkMode, requiresCompatibilities: .taskDefinition.requiresCompatibilities, cpu: .taskDefinition.cpu, memory: .taskDefinition.memory}')
           echo $NEW_TASK_DEF > new-task.json
 
           # Register new task definition
