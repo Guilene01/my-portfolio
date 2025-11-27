@@ -1,4 +1,4 @@
-name: Utc App CI/CD/S3
+name: Utc App and Deploy to S3 CI/CD
 
 on:
   push:
@@ -10,7 +10,7 @@ env:
   python-version: "3.11"
 
 jobs:
-  build:
+  build_job:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,3 +32,18 @@ jobs:
 
       - name: Build image
         run: docker build -t my-portfolio .
+      
+      - name: configure Aws credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+            role-to-assume: arn:aws:iam::977098999802:role/OIDC-ROLE
+            aws-region: us-east-1
+      
+      - name: Upload to S3
+        uses: aws-actions/s3-sync@v1
+        with:
+          bucket: my-bucket-gamela.shop 
+          region: us-east-1
+          source-dir: .
+          dest-dir: utc-app/
+          
