@@ -48,4 +48,4 @@ jobs:
 
       - name: Upload to S3
         run: |
-          aws s3 sync ./path/to/upload s3://my-bucket-gamela.shop/utc-app/ --delete
+          aws s3 sync . s3://my-bucket-gamela.shop/utc-app/ --delete
