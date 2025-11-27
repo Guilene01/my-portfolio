@@ -1,4 +1,4 @@
-name: Utc App CI/CD
+name: Utc App CI/CD/S3
 
 on:
   push:
