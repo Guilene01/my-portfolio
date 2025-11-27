@@ -12,7 +12,7 @@ permissions:
   packages: write
 
 jobs:
-  build:
+  build_my_image:
     runs-on: ubuntu-latest
     outputs:
       image-uri: ${{ steps.set-image.outputs.image }}
