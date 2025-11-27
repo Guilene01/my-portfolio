@@ -47,11 +47,5 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload to S3
-        uses: jakejarvis/s3-sync@v0.5.1
-        with:
-          args: --delete
-        env:
-          AWS_S3_BUCKET: my-bucket-gamela.shop
-          AWS_REGION: us-east-1
-          SOURCE_DIR: .
-          DEST_DIR: utc-app/
+        run: |
+          aws s3 sync ./path/to/upload s3://my-bucket-gamela.shop/utc-app/ --delete
