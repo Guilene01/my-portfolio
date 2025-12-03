@@ -12,7 +12,7 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.11"
-  IMAGE_NAME: portfolio
+  IMAGE_NAME: dev
   AWS_REGION: us-east-1
   IMAGE_TAG: ${{ github.sha }}
   ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
