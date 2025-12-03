@@ -54,11 +54,11 @@ jobs:
           tags: |
             ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
       
-      - name: Scan image with Trivy
+      - name: Scan images with Trivy
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
           format: table
           exit-code: '1'
           severity: HIGH,CRITICAL
-              
+
