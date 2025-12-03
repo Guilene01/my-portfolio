@@ -16,6 +16,7 @@ env:
   IMAGE_TAG: ${{ github.sha }}
   ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID}}
   ECR_REPO: ${{ secrets.ECR_REPO }}
+  AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_ARN }}
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -41,7 +42,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
   
       - name: Login to ECR
